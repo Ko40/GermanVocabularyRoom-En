@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>フリップカードで単語学習</title>
+  <style>
+    /* カードのスタイル */
+    .card {
+      perspective: 1000px;
+      width: 300px;
+      height: 200px;
+      margin: 50px auto;
+      cursor: pointer;
+    }
+    /* カードの内側 */
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.8s;
+      transform-style: preserve-3d;
+    }
+    /* カードがフリップしたときのスタイル */
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    /* カードの前面と背面 */
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      color: white;
+      border-radius: 10px;
+    }
+    /* 前面のスタイル（ドイツ語の単語） */
+    .card-front {
+      background-color: #3498db;
+    }
+    /* 背面のスタイル（英語の単語） */
+    .card-back {
+      background-color: #2ecc71;
+      transform: rotateY(180deg);
+    }
+
+    /* ボタンの配置 */
+    .nav-button {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #previous-btn {
+      left: 0;
+    }
+    #next-btn {
+      right: 0;
+    }
+    /* ボタンを非表示にするスタイル */
+    .hidden {
+      display: none;
+    }
+    /* 中央のボタンのスタイル */
+    #back-to-start-btn {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<h2 style="text-align: center;">German words card</h2>
+
+<div class="card" onclick="flipCard()">
+  <div class="card-inner">
+    <div class="card-front" id="german-word">
+      ドイツ語単語
+    </div>
+    <div class="card-back" id="english-word">
+      英語単語
+    </div>
+  </div>
+</div>
+
+<button id="previous-btn" class="nav-button hidden" onclick="prevWord()">Previous Word</button>
+<button id="back-to-start-btn" onclick="backToStart()">Back to Start</button>
+<button id="next-btn" class="nav-button" onclick="nextWord()">Next Word</button>
+
+<script>
+  // 単語リスト（German - English）
+const wordList = [
+  { german: 'das Wohnzimmer', english: 'living room' },
+  { german: 'das Esszimmer', english: 'dining room' },
+  { german: 'die Küche', english: 'kitchen' },  // "Küche"の誤字修正
+  { german: 'das Badezimmer', english: 'bathroom' },
+  { german: 'das Schlafzimmer', english: 'bedroom' },
+  { german: 'der Keller', english: 'cellar' },
+  { german: 'das Zimmer', english: 'room' },  // "das" Zimmerに修正
+  { german: 'die Stube', english: 'living room' },
+  { german: 'die Kammer', english: 'small room/box room' },  // "House" を削除
+  { german: 'der Raum', english: 'room/space/area' },
+  { german: 'der Flur', english: 'hall/corridor' },
+  { german: 'der Korridor', english: 'corridor' },
+  { german: 'das Arbeitszimmer', english: 'work room/study' },  // "Arbeitzimmer" の誤字修正
+  { german: 'das Doppelzimmer', english: 'twin room/double room' },  // "dpuble" を "double" に修正
+  { german: 'das Einzelzimmer', english: 'single room' },
+  { german: 'das Kinderzimmer', english: 'children\'s room' },  // "childrenäs" を修正
+  { german: 'die Zimmertemperatur', english: 'room temperature' },
+  { german: 'die Badewanne', english: 'bathtub' },  // "der Badewanne" を "die" に修正
+  { german: 'das Schwimmbad', english: 'swimming pool' },
+  { german: 'die Erste Kammer', english: 'Upper House' },
+  { german: 'die Zweite Kammer', english: 'Lower House' },
+  { german: 'die Vorratskammer', english: 'pantry' },
+  { german: 'das Dach', english: 'roof' },
+  { german: 'die Mauer', english: 'wall' },
+  { german: 'die Säule', english: 'column/pillar' },
+  { german: 'der Schornstein', english: 'chimney' },  // "Scornstein" の誤字修正
+  { german: 'der Boden', english: 'floor/ground/basis/bottom' },
+  { german: 'die Schwelle', english: 'threshold' },
+  { german: 'die Decke', english: 'cover/blanket/ceiling' },
+  { german: 'die Wand', english: 'wall' },
+  { german: 'das Fenster', english: 'window' },
+  { german: 'das Gitter', english: 'grating/bars' },  // "granting" を "grating" に修正
+  { german: 'der Balkon', english: 'balcony' },
+  { german: 'die Terrasse', english: 'terrace' },
+  { german: 'die Treppe', english: 'stairs' },
+  { german: 'die Tür', english: 'door' },
+  { german: 'der Dachboden', english: 'loft/attic' },
+  { german: 'der Fußboden', english: 'floor' },
+  { german: 'der Bodenfrost', english: 'ground frost' },  // "grpimd" を "ground" に修正
+  { german: 'die Bodenschätze', english: 'mineral resources' },
+  { german: 'die Bettdecke', english: 'blanket/quilt/bed cover' },
+  { german: 'die Tischdecke', english: 'tablecloth' },
+  { german: 'die Wolldecke', english: 'blanket' },
+  { german: 'die Fensterbank', english: 'window sill' },
+  { german: 'das Fenstergitter', english: 'grille' },
+  { german: 'die Fensterscheibe', english: 'windowpane' },
+  { german: 'das Schaufenster', english: 'shop window' },
+  { german: 'der Treppenabsatz', english: 'landing' },
+  { german: 'das Treppenhaus', english: 'staircase' },
+  { german: 'die Treppenstufe', english: 'step' },
+  { german: 'die Wendeltreppe', english: 'spiral staircase' },  // "sprial" の誤字修正
+  { german: 'die Rolltreppe', english: 'escalator' },
+  { german: 'der Sessel', english: 'armchair/easy chair' },  // "&" を "/" に修正
+  { german: 'das Sofa', english: 'sofa' },
+  { german: 'das Kissen', english: 'cushion' },
+  { german: 'der Teppich', english: 'carpet' },
+  { german: 'der Tisch', english: 'table' },
+  { german: 'der Stuhl', english: 'chair' },
+  { german: 'das Kabinett', english: 'cabinet' },
+  { german: 'das Regal', english: 'shelves' },
+  { german: 'die Lampe', english: 'lamp' },
+  { german: 'die Tapete', english: 'wallpaper' },
+  { german: 'die Gardine', english: 'curtain' },
+  { german: 'der Vorhang', english: 'curtain' },  // "Vohrhang" の誤字修正
+  { german: 'das Schulkind', english: 'pupil' },
+  { german: 'der Arbeitstisch', english: 'worktable/workbench' },
+  { german: 'der Esstisch', english: 'dining table' },
+  { german: 'der Nachtisch', english: 'dessert' },
+  { german: 'das Tischbein', english: 'table leg' },
+  { german: 'das Tischtennis', english: 'table tennis' },  // "table leg" を "table tennis" に修正
+  { german: 'das Tischtuch', english: 'tablecloth' },
+  { german: 'die Glühlampe', english: 'bulb' },
+  { german: 'der Lampenschirm', english: 'lampshade' },
+  { german: 'die Öllampe', english: 'oil lamp' },
+    // 他の単語を追加
+];
+  let currentIndex = 0;
+
+  // カードをフリップする関数
+  function flipCard() {
+    const card = document.querySelector('.card');
+    card.classList.toggle('flipped');
+  }
+
+  // 次の単語を表示する関数
+  function nextWord() {
+    if (currentIndex < wordList.length - 1) {
+      currentIndex++;
+    }
+    updateWord();
+  }
+
+  // 前の単語を表示する関数
+  function prevWord() {
+    if (currentIndex > 0) {
+      currentIndex--;
+    }
+    updateWord();
+  }
+
+  // 最初の単語に戻る関数
+  function backToStart() {
+    currentIndex = 0;
+    updateWord();
+  }
+
+  // 単語を更新して、ボタンの表示を調整する関数
+  function updateWord() {
+    // ドイツ語と英語の単語を更新
+    document.getElementById('german-word').innerHTML = wordList[currentIndex].german;
+    document.getElementById('english-word').innerHTML = wordList[currentIndex].english;
+
+    // フリップがされたままの場合、戻す
+    const card = document.querySelector('.card');
+    if (card.classList.contains('flipped')) {
+      card.classList.remove('flipped');
+    }
+
+    // ボタンの表示を制御
+    document.getElementById('previous-btn').classList.toggle('hidden', currentIndex === 0);
+    document.getElementById('next-btn').classList.toggle('hidden', currentIndex === wordList.length - 1);
+  }
+
+  // ページ読み込み時に最初の単語を表示
+  window.onload = function() {
+    updateWord();
+  }
+</script>
+
+</body>
+</html>
